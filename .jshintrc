@@ -24,5 +24,6 @@
 	"onevar": false,
 	"white": true,
 	"esnext": true,
-	"validthis": true
+	"validthis": true,
+	"noyield": true
 }
