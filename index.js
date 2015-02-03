@@ -35,31 +35,15 @@ app.use(routes.middleware());
 
 function Subreddit(name) {
 	this.subreddit = name;
-	this.commentsUrl = 'http://www.reddit.com/r/' + name + '/comments/.rss';
-	this.comments = null;
+	this.commentsUrl = 'http://www.reddit.com/r/' + name + '/comments/.json';
 }
 
-Subreddit.prototype.fetchComments = function fetchComments() {
-	var feedparser = bluebird.promisifyAll(new FeedParser());
-	co(function*() {
-		var comments = [];
+Subreddit.prototype._fetchComments = function _fetchComments() {
+	return co(function*() {
 		var req = yield request.getAsync(this.commentsUrl);
-
-		feedparser.on('readable', function() {
-			var stream = this;
-			var meta = this.meta;
-			var item;
-
-			while (!!(item = stream.read())) {
-				comments.push(item.summary);
-			}
-		});
-
-		yield feedparser.writeAsync(req[0].body);
-		return yield comments;
-	}.bind(this))
-	.then(function(res) {
-		this.comments = res;
+		var comments = yield JSON.parse(req[0].body).data.children;
+		//console.log(comments);
+		return comments;
 	}.bind(this))
 	.catch(function(err) {
 		console.error(err.stack);
@@ -67,7 +51,9 @@ Subreddit.prototype.fetchComments = function fetchComments() {
 };
 
 var kevrom = new Subreddit('kevrom');
-kevrom.fetchComments();
+kevrom._fetchComments().then(function(res) {
+	console.log(res);
+});
 
 
 var port = 3000;
