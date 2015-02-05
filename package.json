@@ -19,7 +19,8 @@
     "koa-static": "^1.4.8",
     "readable-stream": "^1.0.26",
     "redwrap": "0.0.4",
-    "request": "^2.51.0"
+    "request": "^2.51.0",
+    "rethinkdbdash": "^1.16.3"
   },
   "engines": {
     "iojs": "1.0.x"
