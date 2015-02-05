@@ -9,8 +9,7 @@ var path = require('path');
 
 var app = global.app = koa();
 var routes = require('./server/routes');
-var Subreddit = require('./server/Subreddit');
-
+var subreddit = require('./server/subreddit');
 
 app.use(function *(next) {
 	var render = views('server/views', {
@@ -24,16 +23,18 @@ app.use(serve(path.join(__dirname, '/dist')));
 app.use(routes.middleware());
 
 app.io.use(function*(next) {
-	console.log('someone connected');
+	// someone connected
 	yield* next;
-	console.log('someone disconnected');
+	// someone disconnected
 });
 
 
-var kevrom = new Subreddit('kevrom');
-kevrom._fetchComments().then(function(res) {
-	//console.log(res);
-});
+var subreddits = [
+	'kevrom',
+	'wtf'
+];
+
+subreddits.forEach(subreddit);
 
 var port = 3000;
 var host = '0.0.0.0';
