@@ -9,7 +9,7 @@ var path = require('path');
 
 var app = global.app = koa();
 var routes = require('./server/routes');
-var subreddit = require('./server/subreddit');
+var comments = require('./server/comments');
 
 app.use(function *(next) {
 	var render = views('server/views', {
@@ -28,14 +28,6 @@ app.io.use(function*(next) {
 	// someone disconnected
 });
 
-
-var subreddits = [
-	'kevrom',
-	'wtf'
-];
-
-subreddits.forEach(subreddit);
-
 var port = 3000;
 var host = '0.0.0.0';
 
@@ -44,3 +36,5 @@ if (!module.parent) {
 		console.log('Now listening on http://' + host + ':' + port);
 	});
 }
+
+comments.getComments();
