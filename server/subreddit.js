@@ -6,26 +6,31 @@ var bluebird = require('bluebird');
 var request = bluebird.promisifyAll(require('request'));
 var r = require('rethinkdbdash')({ db: 'curseit' });
 
-function _fetchComments(subreddit, url) {
+function _storeComments(subreddit, comments) {
+	return co(function*() {
+		yield r.table(subreddit).insert(comments);
+	});
+}
+
+function _fetchComments(url) {
 	return co(function*() {
 		var req = yield request.getAsync(url);
 		var raw = yield JSON.parse(req[0].body).data.children;
 		var comments = raw.map(function(c) {
 			return c.data;
 		});
-		yield r.table(subreddit).insert(comments);
 		return comments;
-	}.bind(this))
+	})
 	.catch(function(err) {
 		console.error(err.stack);
 	});
 }
 
 function _watchChanges(subreddit) {
-	co(function*() {
+	return co(function*() {
 		var cursor = yield r.table(subreddit).changes();
 		cursor.on('data', function(data) {
-			console.log(data);
+			console.log('Emitting new data');
 			app.io.emit('comment', {
 				sub: subreddit,
 				data: data
@@ -38,7 +43,9 @@ function _watchChanges(subreddit) {
 }
 
 function subreddit(name) {
-	var commentsUrl = 'http://www.reddit.com/r/' + name + '/comments/.json';
+	var commentsUrl = 'http://www.reddit.com/r/' + name + '/comments/.json?sort=new';
+
+	var after;
 
 	co(function*() {
 		try {
@@ -61,10 +68,12 @@ function subreddit(name) {
 
 		(function keepFetching() {
 			setTimeout(function() {
-				_fetchComments(name, commentsUrl).then(function() {
-					keepFetching();
+				_fetchComments(commentsUrl).then(function(comments) {
+					_storeComments(name, comments).then(function() {
+						keepFetching();
+					});
 				});
-			}, 1000);
+			}, 1000 * 60);
 		})();
 	});
 }
