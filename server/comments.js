@@ -12,61 +12,47 @@ var reddit = new Snoocore({
 	throttle: 4000
 });
 
-function _storeComments(tableName, comments) {
-	return co(function*() {
-		yield r.table(tableName).insert(comments);
-	});
-}
+var _storeComments = co.wrap(function* _storeComments(tableName, comments) {
+	yield r.table(tableName).insert(comments);
+});
 
-function _fetchComments() {
-	return co(function*() {
-		var comments = yield reddit.raw('http://www.reddit.com/comments.json').get({ limit: 100 });
-		return comments.data.children;
-	});
-}
+var _fetchComments = co.wrap(function* _fetchComments() {
+	var comments = yield reddit.raw('http://www.reddit.com/comments.json').get({ limit: 100 });
+	return comments.data.children;
+});
 
-function _watchChanges(tableName) {
-	return co(function*() {
-		var cursor = yield r.table(tableName).changes();
-		cursor.on('data', function(data) {
-			console.log('Emitting new data');
-			app.io.emit('comment', data);
-		});
-	})
-	.catch(function(err) {
-		console.error(err.stack);
+var _watchChanges = co.wrap(function* _watchChanges(tableName) {
+	var cursor = yield r.table(tableName).changes();
+	cursor.on('data', function(data) {
+		app.io.emit('comment', data);
 	});
-}
+});
 
-function getComments() {
+var getComments = co.wrap(function* getComments() {
 	var tableName = 'comments';
 
-	co(function*() {
-		try {
-			yield r.tableCreate(tableName);
-		} catch (err) {
-			console.error('Table already exists.');
-		}
+	try {
+		yield r.tableCreate(tableName);
+	} catch (err) {
+		console.error('Table already exists.');
+	}
 
-		app.io.on('connection', function(socket) {
-			co(function*() {
-				var initialPayload = yield r.table(tableName);
-				socket.emit('comment', initialPayload);
-			});
+	app.io.on('connection', function(socket) {
+		co(function*() {
+			var initialPayload = yield r.table(tableName);
+			socket.emit('comment', initialPayload);
 		});
-
-		_watchChanges(tableName);
-
-		(function keepFetching() {
-			setTimeout(function() {
-				_fetchComments().then(function(comments) {
-					_storeComments(tableName, comments).then(function() {
-						keepFetching();
-					});
-				});
-			}, 2000);
-		})();
 	});
-}
+
+	_watchChanges(tableName);
+
+	(function keepFetching() {
+		setTimeout(co.wrap(function*() {
+			var comments = yield _fetchComments();
+			yield _storeComments(tableName, comments);
+			keepFetching();
+		}), 2000);
+	})();
+});
 
 module.exports.getComments = getComments;
