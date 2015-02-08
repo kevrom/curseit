@@ -37,12 +37,10 @@ var getComments = co.wrap(function* getComments() {
 		console.error('Table already exists.');
 	}
 
-	app.io.on('connection', function(socket) {
-		co(function*() {
-			var initialPayload = yield r.table(tableName);
-			socket.emit('comment', initialPayload);
-		});
-	});
+	app.io.on('connection', co.wrap(function*(socket) {
+		var initialPayload = yield r.table(tableName);
+		socket.emit('comment', initialPayload);
+	}));
 
 	_watchChanges(tableName);
 
